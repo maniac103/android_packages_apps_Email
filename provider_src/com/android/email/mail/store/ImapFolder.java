@@ -796,19 +796,35 @@ public class ImapFolder extends Folder {
         commands.add(filter + " (OR SUBJECT " + octetLength);
         commands.add(filter + " BODY " + octetLength);
         commands.add(filter + ")))");
-        return getMessagesInternal(complexSearchForUids(commands), listener);
-    }
 
-    /* package */ String[] complexSearchForUids(List<String> commands) throws MessagingException {
         checkOpen();
         try {
+            List<ImapResponse> responses;
             try {
-                return getSearchUids(mConnection.executeComplexCommand(commands, false));
+                responses = mConnection.executeComplexCommand(commands, false);
             } catch (ImapException e) {
-                return Utility.EMPTY_STRINGS; // not found;
-            } catch (IOException ioe) {
-                throw ioExceptionHandler(mConnection, ioe);
+                if (ImapConstants.NO.equals(e.getStatus())) {
+                    // try again without body search, that is, remove second to last line of the search above,
+                    // just keeping FROM, TO, CC and SUBJECT search terms
+                    commands.clear();
+                    commands.add(ImapConstants.UID_SEARCH + " CHARSET " + charset + " OR FROM " + octetLength);
+                    commands.add(filter + " (OR TO " + octetLength);
+                    commands.add(filter + " (OR CC " + octetLength);
+                    commands.add(filter + " SUBJECT " + octetLength);
+                    commands.add(filter + "))");
+                    responses = mConnection.executeComplexCommand(commands, false);
+                } else {
+                    throw e;
+                }
             }
+            return getMessagesInternal(getSearchUids(responses), listener);
+        } catch (ImapException e) {
+            if (DebugUtils.DEBUG) {
+                LogUtils.d(Logging.LOG_TAG, e, "IMAP exception during search");
+            }
+            return Message.EMPTY_ARRAY; // not found
+        } catch (IOException ioe) {
+            throw ioExceptionHandler(mConnection, ioe);
         } finally {
             destroyResponses();
         }
