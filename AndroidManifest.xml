@@ -22,6 +22,7 @@
      c is a code which increments per version, in case we have multiple releases
           on the same date. This should start at zero. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.android.email"
     android:versionCode="7008110" >
 
@@ -756,6 +757,12 @@
         <service android:name="com.android.mail.MailLogService">
         </service>
         <service android:name="com.android.mail.browse.EmlTempFileDeletionService" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="com.android.email.androidx-startup"
+            android:exported="false"
+            tools:replace="android:authorities" />
     </application>
 
     <!-- Legacy permissions, etc. can go here -->
